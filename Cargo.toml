@@ -1,0 +1,17 @@
+[package]
+name = "lnurl"
+version = "0.1.0"
+authors = ["Edouard Paris <m@edouard.paris>"]
+description = "Helpers for lnurl"
+readme = "README.md"
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/edouardparis/rust-lnurl.git"
+documentation = "https://docs.rs/lnurl/"
+
+[lib]
+name = "lnurl"
+
+[dependencies]
+serde = { version = "1.0.93", features =["derive"]}
+serde_json = "1.0.39"
