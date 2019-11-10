@@ -1,6 +1,8 @@
 # lnurl
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/edouardparis/rust-lnurl/blob/master/LICENSE)
+[![lnurl on crates.io](https://img.shields.io/crates/v/lnurl.svg)](https://crates.io/crates/lnurl)
+[![lnurl on docs.rs](https://docs.rs/lnurl/badge.svg)](https://docs.rs/lnurl)
 
 ## Documentation
 
