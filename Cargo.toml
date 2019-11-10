@@ -2,7 +2,7 @@
 name = "lnurl"
 version = "0.1.0"
 authors = ["Edouard Paris <m@edouard.paris>"]
-description = "Helpers for lnurl"
+description = "Helpers for LNURL"
 readme = "README.md"
 edition = "2018"
 license = "MIT"
