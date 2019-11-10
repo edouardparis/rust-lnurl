@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Tag {
-    #[serde(rename = "withdrawalRequest")]
-    WithdrawalRequest,
+    #[serde(rename = "withdrawRequest")]
+    WithdrawRequest,
 }
 
 /// Withdrawal is a withdrawal resource.
@@ -28,16 +28,38 @@ pub struct Withdrawal {
     pub tag: Tag,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ResponseStatus {
-    ERROR,
-    OK,
-}
-
 /// Response is the response format returned by Service.
 /// Example: `{\"status\":\"ERROR\",\"reason\":\"error detail...\"}"`
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Response {
-    pub status: ResponseStatus,
-    pub reason: Option<String>,
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "status")]
+pub enum Response {
+    #[serde(rename = "ERROR")]
+    Error { reason: String },
+    #[serde(rename = "OK")]
+    Ok,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::lnurl::Response;
+
+    #[test]
+    fn response_from_str() {
+        let json = r#"{"status":"ERROR","reason":"error detail..."}"#;
+        let resp: Response = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            resp,
+            Response::Error {
+                reason: "error detail...".to_string()
+            }
+        );
+    }
+    #[test]
+    fn response_to_str() {
+        let resp = Response::Error {
+            reason: "error detail...".to_string(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert_eq!(json, r#"{"status":"ERROR","reason":"error detail..."}"#);
+    }
 }
