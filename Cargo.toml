@@ -1,6 +1,6 @@
 [package]
 name = "lnurl"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Edouard Paris <m@edouard.paris>"]
 description = "Helpers for LNURL"
 readme = "README.md"
@@ -13,5 +13,5 @@ documentation = "https://docs.rs/lnurl/"
 name = "lnurl"
 
 [dependencies]
-serde = { version = "1.0.93", features =["derive"]}
-serde_json = "1.0.39"
+serde = { version = "^1.0.93", features =["derive"]}
+serde_json = "^1.0.39"
