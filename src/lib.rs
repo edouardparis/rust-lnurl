@@ -1,6 +1,18 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum Event {
+    #[serde(rename = "REGISTERED")]
+    Registered,
+    #[serde(rename = "LOGGEDIN")]
+    LoggedIn,
+    #[serde(rename = "LINKED")]
+    Linked,
+    #[serde(rename = "AUTHED")]
+    Authed,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Tag {
     #[serde(rename = "withdrawRequest")]
     WithdrawRequest,
@@ -36,30 +48,55 @@ pub enum Response {
     #[serde(rename = "ERROR")]
     Error { reason: String },
     #[serde(rename = "OK")]
-    Ok,
+    Ok { event: Option<Event> },
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::lnurl::Response;
+    use super::*;
 
     #[test]
     fn response_from_str() {
-        let json = r#"{"status":"ERROR","reason":"error detail..."}"#;
-        let resp: Response = serde_json::from_str(json).unwrap();
-        assert_eq!(
-            resp,
-            Response::Error {
-                reason: "error detail...".to_string()
-            }
-        );
+        let tests = vec![
+            (
+                r#"{"status":"ERROR","reason":"error detail..."}"#,
+                Response::Error {
+                    reason: "error detail...".to_string(),
+                },
+            ),
+            (
+                r#"{"status":"OK","event":"LOGGEDIN"}"#,
+                Response::Ok {
+                    event: Some(Event::LoggedIn),
+                },
+            ),
+        ];
+
+        for test in tests {
+            let resp: Response = serde_json::from_str(test.0).unwrap();
+            assert_eq!(resp, test.1);
+        }
     }
     #[test]
     fn response_to_str() {
-        let resp = Response::Error {
-            reason: "error detail...".to_string(),
-        };
-        let json = serde_json::to_string(&resp).unwrap();
-        assert_eq!(json, r#"{"status":"ERROR","reason":"error detail..."}"#);
+        let tests = vec![
+            (
+                r#"{"status":"ERROR","reason":"error detail..."}"#,
+                Response::Error {
+                    reason: "error detail...".to_string(),
+                },
+            ),
+            (
+                r#"{"status":"OK","event":"LOGGEDIN"}"#,
+                Response::Ok {
+                    event: Some(Event::LoggedIn),
+                },
+            ),
+        ];
+
+        for test in tests {
+            let json = serde_json::to_string(&test.1).unwrap();
+            assert_eq!(json, test.0);
+        }
     }
 }
