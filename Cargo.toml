@@ -12,6 +12,15 @@ documentation = "https://docs.rs/lnurl/"
 [lib]
 name = "lnurl"
 
+[features]
+# Include nothing by default
+default = []
+service = ["bitcoin_hashes", "hex", "secp256k1"]
+
 [dependencies]
+bitcoin_hashes = { version = "^0.7.6", optional = true }
+hex = { version = "0.4.2", optional = true }
+secp256k1 = { version = "^0.17.2", optional = true }
 serde = { version = "^1.0.93", features =["derive"]}
 serde_json = "^1.0.39"
+

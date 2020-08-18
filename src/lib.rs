@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "service")]
+pub mod service;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Event {
     #[serde(rename = "REGISTERED")]
