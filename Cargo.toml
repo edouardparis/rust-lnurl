@@ -15,12 +15,28 @@ name = "lnurl"
 [features]
 # Include nothing by default
 default = []
-service = ["bitcoin_hashes", "hex", "secp256k1"]
+service = ["hex", "secp256k1"]
 
 [dependencies]
-bitcoin_hashes = { version = "^0.7.6", optional = true }
 hex = { version = "0.4.2", optional = true }
 secp256k1 = { version = "^0.17.2", optional = true }
 serde = { version = "^1.0.93", features =["derive"]}
 serde_json = "^1.0.39"
 
+[dev-dependencies]
+bech32 = "0.7.1"
+hex = "0.4.2"
+image = "0.22.3"
+qrcode = "0.11.0"
+rand = "0.7.3"
+serde_derive = "1.0"
+tokio = { version = "0.2", features = ["macros"] }
+tracing = "0.1"
+tracing-subscriber = "0.2"
+warp = "0.2.4"
+
+[examples]
+
+[[example]]
+name = "lnurl_auth"
+required-features = ["service"]
