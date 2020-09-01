@@ -1,10 +1,13 @@
+use std::env;
 use warp;
 use warp::Filter;
 
 #[tokio::main]
 async fn main() {
+    let url = env::var("SERVICE_URL").unwrap();
+
     let db = model::new_db();
-    let api = filter::api("hello world", db).with(warp::log("api"));
+    let api = filter::api(url, db).with(warp::log("api"));
     warp::serve(api).run(([127, 0, 0, 1], 3030)).await;
 }
 
@@ -15,7 +18,7 @@ mod filter {
     use warp::Filter;
 
     pub fn api(
-        url: &'static str,
+        url: String,
         db: DB,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         login(url).or(users_list(db))
@@ -23,11 +26,11 @@ mod filter {
 
     /// GET /login
     pub fn login(
-        url: &'static str,
+        url: String,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("login")
             .and(warp::get())
-            .and_then(move || handler::login(url))
+            .and_then(move || handler::login(url.clone()))
     }
 
     /// GET /users
@@ -46,6 +49,7 @@ mod filter {
 }
 
 mod handler {
+    use super::img;
     use super::model::{Users, DB};
     use std::convert::Infallible;
 
@@ -57,8 +61,23 @@ mod handler {
         Ok(warp::reply::json(&list))
     }
 
-    pub async fn login(url: &'static str) -> Result<impl warp::Reply, Infallible> {
-        Ok(warp::http::Response::builder().body(url))
+    pub async fn login(url: String) -> Result<impl warp::Reply, Infallible> {
+        Ok(warp::http::Response::builder().body(img::create_qrcode(&url)))
+    }
+}
+
+mod img {
+    use bech32::ToBase32;
+    use image::{DynamicImage, ImageOutputFormat, Luma};
+    use qrcode::QrCode;
+
+    pub fn create_qrcode(url: &str) -> Vec<u8> {
+        let encoded = bech32::encode("lnurl", url.as_bytes().to_base32()).unwrap();
+        let code = QrCode::new(encoded.to_string()).unwrap();
+        let mut image: Vec<u8> = Vec::new();
+        let img = DynamicImage::ImageLuma8(code.render::<Luma<u8>>().build());
+        img.write_to(&mut image, ImageOutputFormat::PNG).unwrap();
+        image
     }
 }
 
