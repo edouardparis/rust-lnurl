@@ -2,12 +2,20 @@ use std::env;
 use warp;
 use warp::Filter;
 
+use tracing_subscriber::fmt::format::FmtSpan;
+
 #[tokio::main]
 async fn main() {
-    let url = env::var("SERVICE_URL").unwrap();
+    let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "tracing=info,warp=debug".to_owned());
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_span_events(FmtSpan::CLOSE)
+        .init();
 
+    let url = env::var("SERVICE_URL").unwrap();
+    let verifier = lnurl::service::AuthVerifier::new();
     let db = model::new_db();
-    let api = filter::api(url, db).with(warp::log("api"));
+    let api = filter::api(url, db, verifier).with(warp::log("api"));
     warp::serve(api).run(([127, 0, 0, 1], 3030)).await;
 }
 
@@ -15,22 +23,29 @@ mod filter {
     use super::auth;
     use super::handler;
     use super::model::DB;
+    use lnurl::service::AuthVerifier;
     use warp::Filter;
 
     pub fn api(
         url: String,
         db: DB,
+        verifier: AuthVerifier,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-        auth(db.clone()).or(login(url)).or(users_list(db))
+        auth(db.clone(), verifier)
+            .or(login(url))
+            .or(users_list(db))
+            .with(warp::trace::request())
     }
 
     /// GET /auth?sig=<sig>&key=<key>
     pub fn auth(
         db: DB,
+        verifier: AuthVerifier,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("auth")
             .and(warp::get())
             .and(with_db(db))
+            .and(with_verifier(verifier))
             .and(warp::query::<auth::Auth>())
             .and_then(handler::auth)
     }
@@ -57,6 +72,12 @@ mod filter {
     fn with_db(db: DB) -> impl Filter<Extract = (DB,), Error = std::convert::Infallible> + Clone {
         warp::any().map(move || db.clone())
     }
+
+    fn with_verifier(
+        v: AuthVerifier,
+    ) -> impl Filter<Extract = (AuthVerifier,), Error = std::convert::Infallible> + Clone {
+        warp::any().map(move || v.clone())
+    }
 }
 
 mod auth {
@@ -64,6 +85,7 @@ mod auth {
 
     #[derive(Deserialize, Serialize)]
     pub struct Auth {
+        pub k1: String,
         pub sig: String,
         pub key: String,
     }
@@ -77,7 +99,22 @@ mod handler {
     use rand::random;
     use std::convert::Infallible;
 
-    pub async fn auth(_db: DB, _credentials: auth::Auth) -> Result<impl warp::Reply, Infallible> {
+    pub async fn auth(
+        _db: DB,
+        verifier: lnurl::service::AuthVerifier,
+        credentials: auth::Auth,
+    ) -> Result<impl warp::Reply, Infallible> {
+        let res = verifier
+            .verify(&credentials.k1, &credentials.sig, &credentials.key)
+            .unwrap();
+        if !res {
+            return Ok(warp::reply::json(&lnurl::Response::Error {
+                reason: format!(
+                    "{}, {}, {}",
+                    &credentials.k1, &credentials.sig, &credentials.key
+                ),
+            }));
+        }
         Ok(warp::reply::json(&lnurl::Response::Ok {
             event: Some(lnurl::Event::LoggedIn),
         }))

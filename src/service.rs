@@ -6,12 +6,14 @@ use bitcoin_hashes::{sha256, Hash};
 use secp256k1::{Error, Message, PublicKey, Secp256k1, Signature, Verification, VerifyOnly};
 
 /// VerifierError is the AuthVerifier errors.
+#[derive(Debug)]
 pub enum VerifierError {
     Secp256k1Error(Error),
     HexError(hex::FromHexError),
 }
 
 /// AuthVerifier verifies the secp256k1 signature of a message with a given pubkey.
+#[derive(Clone)]
 pub struct AuthVerifier {
     secp: Secp256k1<VerifyOnly>,
 }
