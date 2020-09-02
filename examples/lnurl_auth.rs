@@ -51,6 +51,8 @@ mod filter {
 mod handler {
     use super::img;
     use super::model::{Users, DB};
+    use hex::encode;
+    use rand::random;
     use std::convert::Infallible;
 
     pub async fn list_users(db: DB) -> Result<impl warp::Reply, Infallible> {
@@ -62,6 +64,8 @@ mod handler {
     }
 
     pub async fn login(url: String) -> Result<impl warp::Reply, Infallible> {
+        let challenge: [u8; 32] = random();
+        let url = format!("{}/auth?tag=login&k1={}", url, encode(challenge));
         Ok(warp::http::Response::builder().body(img::create_qrcode(&url)))
     }
 }
