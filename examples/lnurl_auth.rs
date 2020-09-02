@@ -12,8 +12,8 @@ async fn main() {
 }
 
 mod filter {
+    use super::auth;
     use super::handler;
-    use super::model::User;
     use super::model::DB;
     use warp::Filter;
 
@@ -21,7 +21,18 @@ mod filter {
         url: String,
         db: DB,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-        login(url).or(users_list(db))
+        auth(db.clone()).or(login(url)).or(users_list(db))
+    }
+
+    /// GET /auth?sig=<sig>&key=<key>
+    pub fn auth(
+        db: DB,
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+        warp::path!("auth")
+            .and(warp::get())
+            .and(with_db(db))
+            .and(warp::query::<auth::Auth>())
+            .and_then(handler::auth)
     }
 
     /// GET /login
@@ -48,12 +59,29 @@ mod filter {
     }
 }
 
+mod auth {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Deserialize, Serialize)]
+    pub struct Auth {
+        pub sig: String,
+        pub key: String,
+    }
+}
+
 mod handler {
+    use super::auth;
     use super::img;
     use super::model::{Users, DB};
     use hex::encode;
     use rand::random;
     use std::convert::Infallible;
+
+    pub async fn auth(_db: DB, _credentials: auth::Auth) -> Result<impl warp::Reply, Infallible> {
+        Ok(warp::reply::json(&lnurl::Response::Ok {
+            event: Some(lnurl::Event::LoggedIn),
+        }))
+    }
 
     pub async fn list_users(db: DB) -> Result<impl warp::Reply, Infallible> {
         let users = db.lock().await;
