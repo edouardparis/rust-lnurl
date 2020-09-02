@@ -42,12 +42,11 @@ pub fn verify_sig<C: Verification>(
     sig: &[u8],
     pubkey: &[u8],
 ) -> Result<bool, Error> {
-    let msg = sha256::Hash::hash(msg);
     let msg = Message::from_slice(&msg)?;
-    let sig = Signature::from_compact(sig)?;
+    let sig = Signature::from_der(sig)?;
     let pubkey = PublicKey::from_slice(pubkey)?;
-
-    Ok(secp.verify(&msg, &sig, &pubkey).is_ok())
+    secp.verify(&msg, &sig, &pubkey)?;
+    Ok(true)
 }
 
 #[cfg(test)]
