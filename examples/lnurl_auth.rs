@@ -94,13 +94,13 @@ mod auth {
 mod handler {
     use super::auth;
     use super::img;
-    use super::model::{Users, DB};
+    use super::model::{User, Users, DB};
     use hex::encode;
     use rand::random;
     use std::convert::Infallible;
 
     pub async fn auth(
-        _db: DB,
+        db: DB,
         verifier: lnurl::service::AuthVerifier,
         credentials: auth::Auth,
     ) -> Result<impl warp::Reply, Infallible> {
@@ -115,6 +115,10 @@ mod handler {
                 ),
             }));
         }
+        let mut vec = db.lock().await;
+        vec.push(User {
+            pk: credentials.key,
+        });
         Ok(warp::reply::json(&lnurl::Response::Ok {
             event: Some(lnurl::Event::LoggedIn),
         }))
