@@ -32,7 +32,7 @@ mod filter {
         verifier: AuthVerifier,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         auth(db.clone(), verifier)
-            .or(login(url))
+            .or(login(db.clone(), url))
             .or(users_list(db))
             .with(warp::trace::request())
     }
@@ -52,11 +52,14 @@ mod filter {
 
     /// GET /login
     pub fn login(
+        db: DB,
         url: String,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         warp::path!("login")
             .and(warp::get())
-            .and_then(move || handler::login(url.clone()))
+            .and(with_db(db))
+            .and(warp::any().map(move || url.clone()))
+            .and_then(handler::login)
     }
 
     /// GET /users
@@ -94,7 +97,7 @@ mod auth {
 mod handler {
     use super::auth;
     use super::img;
-    use super::model::{User, Users, DB};
+    use super::model::{Sessions, User, DB};
     use hex::encode;
     use rand::random;
     use std::convert::Infallible;
@@ -104,6 +107,12 @@ mod handler {
         verifier: lnurl::service::AuthVerifier,
         credentials: auth::Auth,
     ) -> Result<impl warp::Reply, Infallible> {
+        let mut sessions = db.lock().await;
+        if sessions.get(&credentials.k1).is_none() {
+            return Ok(warp::reply::json(&lnurl::Response::Error {
+                reason: format!("{} does not exist", &credentials.k1),
+            }));
+        }
         let res = verifier
             .verify(&credentials.k1, &credentials.sig, &credentials.key)
             .unwrap();
@@ -115,26 +124,34 @@ mod handler {
                 ),
             }));
         }
-        let mut vec = db.lock().await;
-        vec.push(User {
-            pk: credentials.key,
-        });
+        sessions.insert(
+            credentials.k1,
+            Some(User {
+                pk: credentials.key,
+            }),
+        );
         Ok(warp::reply::json(&lnurl::Response::Ok {
             event: Some(lnurl::Event::LoggedIn),
         }))
     }
 
     pub async fn list_users(db: DB) -> Result<impl warp::Reply, Infallible> {
-        let users = db.lock().await;
-        let list = Users {
-            users: users.to_vec(),
-        };
+        let sessions = db.lock().await;
+        let users = sessions
+            .values()
+            .filter_map(|o| o.as_ref())
+            .map(|u| u.clone())
+            .collect();
+        let list = Sessions { users: users };
         Ok(warp::reply::json(&list))
     }
 
-    pub async fn login(url: String) -> Result<impl warp::Reply, Infallible> {
+    pub async fn login(db: DB, url: String) -> Result<impl warp::Reply, Infallible> {
         let challenge: [u8; 32] = random();
-        let url = format!("{}/auth?tag=login&k1={}", url, encode(challenge));
+        let k1 = encode(challenge);
+        let url = format!("{}/auth?tag=login&k1={}", url, &k1);
+        let mut sessions = db.lock().await;
+        sessions.insert(k1, None);
         Ok(warp::http::Response::builder().body(img::create_qrcode(&url)))
     }
 }
@@ -156,11 +173,12 @@ mod img {
 
 mod model {
     use serde_derive::{Deserialize, Serialize};
+    use std::collections::HashMap;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
     #[derive(Debug, Deserialize, Serialize, Clone)]
-    pub struct Users {
+    pub struct Sessions {
         pub users: Vec<User>,
     }
 
@@ -169,9 +187,9 @@ mod model {
         pub pk: String,
     }
 
-    pub type DB = Arc<Mutex<Vec<User>>>;
+    pub type DB = Arc<Mutex<HashMap<String, Option<User>>>>;
 
     pub fn new_db() -> DB {
-        Arc::new(Mutex::new(Vec::new()))
+        Arc::new(Mutex::new(HashMap::new()))
     }
 }
