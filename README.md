@@ -15,7 +15,7 @@ _Readings about **lnurl**_
 ## Progress
 
 - [x] lnurl-withdraw
-- [ ] lnurl-auth
+- [x] lnurl-auth
 - [ ] lnurl-pay
 - [ ] lnurl-channel
 
@@ -57,6 +57,3 @@ if let Err(_) = invoice.parse::<lightning_invoice::SignedRawInvoice>() {
         .body(Body::from(res)).unwrap())
 }
 ```
-
-See [lnurl-examples](https://github.com/edouardparis/lnurl-examples)
-
