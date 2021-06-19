@@ -13,7 +13,7 @@ async fn main() {
         .init();
 
     let url = env::var("SERVICE_URL").unwrap();
-    let verifier = lnurl::service::AuthVerifier::new();
+    let verifier = lnurl::auth::AuthVerifier::new();
     let db = model::new_db();
     let api = filter::api(url, db, verifier).with(warp::log("api"));
     warp::serve(api).run(([127, 0, 0, 1], 8383)).await;
@@ -23,7 +23,7 @@ mod filter {
     use super::auth;
     use super::handler;
     use super::model::DB;
-    use lnurl::service::AuthVerifier;
+    use lnurl::auth::AuthVerifier;
     use warp::Filter;
 
     pub fn api(
@@ -104,7 +104,7 @@ mod handler {
 
     pub async fn auth(
         db: DB,
-        verifier: lnurl::service::AuthVerifier,
+        verifier: lnurl::auth::AuthVerifier,
         credentials: auth::Auth,
     ) -> Result<impl warp::Reply, Infallible> {
         let mut sessions = db.lock().await;

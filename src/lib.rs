@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "service")]
-pub mod service;
+#[cfg(feature = "auth")]
+pub mod auth;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Event {

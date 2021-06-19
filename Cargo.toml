@@ -1,6 +1,6 @@
 [package]
 name = "lnurl"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Edouard Paris <m@edouard.paris>"]
 description = "Helpers for LNURL"
 readme = "README.md"
@@ -15,7 +15,7 @@ name = "lnurl"
 [features]
 # Include nothing by default
 default = []
-service = ["hex", "secp256k1"]
+auth = ["hex", "secp256k1"]
 
 [dependencies]
 hex = { version = "0.4.2", optional = true }
@@ -39,4 +39,4 @@ warp = "0.2.4"
 
 [[example]]
 name = "lnurl_auth"
-required-features = ["service"]
+required-features = ["auth"]
